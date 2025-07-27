@@ -1,4 +1,4 @@
-# Bonicalc 🏡📊
+# BoniCalc 🏡📊
 
 Bonicalc is a handy web calculator that helps you compare your bank's mortgage bundle with external offers. Adjust the inputs, toggle optional products, and instantly see whether the bank deal really saves you money.
 

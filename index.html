@@ -4,8 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bonicalc - Calculadora de Bonificaciones Hipotecarias</title>
+    <meta name="description" content="Descubre si te conviene la hipoteca bonificada del banco o contratar los productos por tu cuenta. Calculadora gratuita de bonificaciones hipotecarias.">
+    <meta name="keywords" content="hipoteca, bonificaciones, calculadora, banco, seguros, ahorro">
+    <meta name="author" content="Bonicalc">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Bonicalc - ¿Te convienen las bonificaciones de tu hipoteca?">
+    <meta property="og:description" content="Calcula si realmente ahorras con la hipoteca bonificada o si pagas de más por los productos del banco.">
+    <meta property="og:image" content="https://bonicalc.com/preview.png">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Bonicalc - Calculadora de Bonificaciones Hipotecarias">
+    <meta property="twitter:description" content="Descubre si las bonificaciones de tu hipoteca realmente te convienen.">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .fade-in {
             animation: fadeIn 0.5s ease-in;
@@ -20,6 +35,10 @@
         .result-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
         }
     </style>
 </head>
@@ -39,7 +58,7 @@
                     <h1 class="text-3xl font-bold">Bonicalc</h1>
                 </div>
                 <p class="text-blue-100 text-lg">
-                    Compara si te conviene la hipoteca bonificada del banco o contratar los productos por tu cuenta
+                    Descubre hasta qué año te conviene mantener las bonificaciones de tu hipoteca
                 </p>
             </div>
 
@@ -89,7 +108,7 @@
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M15 9.354a4 4 0 1 0 0 5.292"></path>
                             </svg>
-                            Tipos de interés
+                            Tipo de interés base
                         </h2>
                         
                         <div>
@@ -98,7 +117,7 @@
                             </label>
                             <input
                                 type="number"
-                                id="tipoSinBonificar"
+                                id="tipoBase"
                                 step="0.01"
                                 value="3.5"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
@@ -106,29 +125,21 @@
                             />
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Tipo de interés CON bonificación (%)
-                            </label>
-                            <input
-                                type="number"
-                                id="tipoBonificado"
-                                step="0.01"
-                                value="2.5"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                placeholder="2.5"
-                            />
+                        <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                            <p class="text-sm font-semibold text-blue-900 mb-1">Tipo de interés con bonificaciones activas:</p>
+                            <p class="text-2xl font-bold text-blue-600" id="tipoFinal">3.50%</p>
+                            <p class="text-xs text-blue-700 mt-1">Bonificación total: <span id="bonificacionTotal">0.00%</span></p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Comparador de productos -->
+                <!-- Comparador de productos con bonificaciones -->
                 <div class="mt-8">
                     <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
-                        Comparador de productos vinculados
+                        Productos vinculados y sus bonificaciones
                     </h2>
                     
                     <div class="overflow-x-auto">
@@ -139,7 +150,13 @@
                                     <th class="text-center py-3 px-4 font-semibold text-gray-700">Activo</th>
                                     <th class="text-center py-3 px-4 font-semibold text-gray-700">
                                         <div class="flex items-center justify-center gap-1">
-                                            <span>Coste con banco</span>
+                                            <span>Bonificación</span>
+                                            <span class="text-xs text-gray-500">(%)</span>
+                                        </div>
+                                    </th>
+                                    <th class="text-center py-3 px-4 font-semibold text-gray-700">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span>Coste banco</span>
                                             <span class="text-xs text-gray-500">(€/año)</span>
                                         </div>
                                     </th>
@@ -149,7 +166,7 @@
                                             <span class="text-xs text-gray-500">(€/año)</span>
                                         </div>
                                     </th>
-                                    <th class="text-center py-3 px-4 font-semibold text-gray-700">Diferencia</th>
+                                    <th class="text-center py-3 px-4 font-semibold text-gray-700">Sobrecoste</th>
                                 </tr>
                             </thead>
                             <tbody id="productosBody">
@@ -159,6 +176,7 @@
                                 <tr class="border-t-2 border-gray-300 bg-gray-50">
                                     <td class="py-4 px-4 font-semibold text-gray-700">TOTAL ANUAL</td>
                                     <td></td>
+                                    <td class="text-center py-4 px-4 font-bold text-green-600" id="totalBonificacion">0.00%</td>
                                     <td class="text-center py-4 px-4 font-bold text-gray-900" id="totalBanco">0€</td>
                                     <td class="text-center py-4 px-4 font-bold text-gray-900" id="totalExterno">0€</td>
                                     <td class="text-center py-4 px-4 font-bold" id="totalDiferencia">0€</td>
@@ -172,19 +190,89 @@
                 <div id="resultados" class="mt-8 space-y-6 hidden">
                     <!-- Se llenará con JavaScript -->
                 </div>
+
+                <!-- Gráfico de evolución -->
+                <div id="graficoContainer" class="mt-8 hidden">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                        Evolución del ahorro/pérdida año a año
+                    </h2>
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <canvas id="graficoEvolucion" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mt-12 pt-8 border-t border-gray-200 text-center text-sm text-gray-600 no-print">
+                    <p>
+                        💡 <strong>Bonicalc</strong> - Calculadora gratuita de bonificaciones hipotecarias
+                    </p>
+                    <p class="mt-2">
+                        Creado con ❤️ para todos los hipotecados
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Datos de productos
+        // Datos de productos con bonificaciones
         const productos = {
-            seguroHogar: { nombre: 'Seguro de hogar', banco: 300, externo: 200, activo: true, icono: 'shield' },
-            seguroVida: { nombre: 'Seguro de vida', banco: 400, externo: 250, activo: true, icono: 'shield' },
-            tarjetas: { nombre: 'Tarjetas y comisiones', banco: 60, externo: 0, activo: true, icono: 'credit-card' },
-            planPensiones: { nombre: 'Plan de pensiones', banco: 0, externo: 0, activo: false, icono: 'wallet' },
-            otros: { nombre: 'Otros productos', banco: 100, externo: 50, activo: true, icono: 'dollar-sign' }
+            nomina: { 
+                nombre: 'Domiciliación de nómina', 
+                bonificacion: 0.5,
+                banco: 0, 
+                externo: 0, 
+                activo: true, 
+                icono: 'wallet' 
+            },
+            seguroHogar: { 
+                nombre: 'Seguro de hogar', 
+                bonificacion: 0.3,
+                banco: 300, 
+                externo: 200, 
+                activo: true, 
+                icono: 'shield' 
+            },
+            seguroVida: { 
+                nombre: 'Seguro de vida', 
+                bonificacion: 0.3,
+                banco: 400, 
+                externo: 250, 
+                activo: true, 
+                icono: 'shield' 
+            },
+            tarjetas: { 
+                nombre: 'Tarjetas y uso mínimo', 
+                bonificacion: 0.2,
+                banco: 60, 
+                externo: 0, 
+                activo: true, 
+                icono: 'credit-card' 
+            },
+            planPensiones: { 
+                nombre: 'Plan de pensiones/fondos', 
+                bonificacion: 0.1,
+                banco: 120, 
+                externo: 120, 
+                activo: false, 
+                icono: 'wallet' 
+            },
+            otros: { 
+                nombre: 'Otros productos', 
+                bonificacion: 0.1,
+                banco: 100, 
+                externo: 50, 
+                activo: false, 
+                icono: 'dollar-sign' 
+            }
         };
+
+        let chartInstance = null;
 
         // Función para calcular la cuota mensual
         function calcularCuotaMensual(capital, plazoAnos, tipoInteres) {
@@ -199,9 +287,37 @@
             return cuota;
         }
 
+        // Función para calcular el desglose de una cuota
+        function calcularDesgloseCuota(capitalPendiente, cuotaMensual, tipoInteres) {
+            const interesMensual = tipoInteres / 100 / 12;
+            const intereses = capitalPendiente * interesMensual;
+            const amortizacion = cuotaMensual - intereses;
+            return { intereses, amortizacion };
+        }
+
         // Función para formatear números
         function formatNumber(num, decimals = 2) {
             return num.toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
+        // Función para actualizar el tipo de interés final
+        function actualizarTipoFinal() {
+            const tipoBase = Number(document.getElementById('tipoBase').value) || 0;
+            let bonificacionTotal = 0;
+            
+            Object.values(productos).forEach(producto => {
+                if (producto.activo) {
+                    bonificacionTotal += producto.bonificacion;
+                }
+            });
+            
+            const tipoFinal = Math.max(0, tipoBase - bonificacionTotal);
+            
+            document.getElementById('tipoFinal').textContent = formatNumber(tipoFinal) + '%';
+            document.getElementById('bonificacionTotal').textContent = formatNumber(bonificacionTotal) + '%';
+            document.getElementById('totalBonificacion').textContent = formatNumber(bonificacionTotal) + '%';
+            
+            return { tipoBase, tipoFinal, bonificacionTotal };
         }
 
         // Función para actualizar la tabla de productos
@@ -228,6 +344,11 @@
                             onchange="toggleProducto('${key}')"
                             class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                         />
+                    </td>
+                    <td class="text-center py-4 px-4">
+                        <span class="font-semibold ${producto.activo ? 'text-green-600' : 'text-gray-400'}">
+                            ${formatNumber(producto.bonificacion)}%
+                        </span>
                     </td>
                     <td class="text-center py-4 px-4">
                         <input
@@ -267,6 +388,7 @@
                 tbody.appendChild(tr);
             });
             
+            actualizarTipoFinal();
             calcular();
         }
 
@@ -282,14 +404,68 @@
             actualizarTablaProductos();
         }
 
+        // Función para calcular año por año
+        function calcularEvolucionAnual(capitalInicial, plazoAnos, tipoSinBonificar, tipoBonificado, costeAnualBanco, costeAnualExterno) {
+            const evolucion = [];
+            let capitalRestanteSinBonificar = capitalInicial;
+            let capitalRestanteBonificado = capitalInicial;
+            let ahorroAcumulado = 0;
+            let anioInflexion = null;
+            
+            const cuotaSinBonificar = calcularCuotaMensual(capitalInicial, plazoAnos, tipoSinBonificar);
+            const cuotaBonificada = calcularCuotaMensual(capitalInicial, plazoAnos, tipoBonificado);
+            
+            for (let ano = 1; ano <= plazoAnos; ano++) {
+                let interesesAnualesSinBonificar = 0;
+                let interesesAnualesBonificados = 0;
+                
+                // Calcular mes a mes
+                for (let mes = 1; mes <= 12; mes++) {
+                    // Sin bonificar
+                    const desgloseSin = calcularDesgloseCuota(capitalRestanteSinBonificar, cuotaSinBonificar, tipoSinBonificar);
+                    interesesAnualesSinBonificar += desgloseSin.intereses;
+                    capitalRestanteSinBonificar -= desgloseSin.amortizacion;
+                    
+                    // Con bonificación
+                    const desgloseCon = calcularDesgloseCuota(capitalRestanteBonificado, cuotaBonificada, tipoBonificado);
+                    interesesAnualesBonificados += desgloseCon.intereses;
+                    capitalRestanteBonificado -= desgloseCon.amortizacion;
+                }
+                
+                // Calcular ahorro/pérdida del año
+                const ahorroInteresesAno = interesesAnualesSinBonificar - interesesAnualesBonificados;
+                const sobrecosteProductosAno = costeAnualBanco - costeAnualExterno;
+                const balanceAno = ahorroInteresesAno - sobrecosteProductosAno;
+                
+                ahorroAcumulado += balanceAno;
+                
+                // Detectar año de inflexión
+                if (anioInflexion === null && balanceAno < 0) {
+                    anioInflexion = ano;
+                }
+                
+                evolucion.push({
+                    ano,
+                    capitalRestante: capitalRestanteBonificado,
+                    interesesSinBonificar: interesesAnualesSinBonificar,
+                    interesesBonificados: interesesAnualesBonificados,
+                    ahorroIntereses: ahorroInteresesAno,
+                    sobrecosteProductos: sobrecosteProductosAno,
+                    balanceAno,
+                    ahorroAcumulado
+                });
+            }
+            
+            return { evolucion, anioInflexion };
+        }
+
         // Función principal de cálculo
         function calcular() {
             const capitalPendiente = Number(document.getElementById('capitalPendiente').value);
             const plazoRestante = Number(document.getElementById('plazoRestante').value);
-            const tipoSinBonificar = Number(document.getElementById('tipoSinBonificar').value);
-            const tipoBonificado = Number(document.getElementById('tipoBonificado').value);
+            const { tipoBase, tipoFinal } = actualizarTipoFinal();
             
-            if (!capitalPendiente || !plazoRestante || !tipoSinBonificar || !tipoBonificado) return;
+            if (!capitalPendiente || !plazoRestante || !tipoBase) return;
             
             // Calcular costes anuales de productos
             let costeAnualBanco = 0;
@@ -312,42 +488,95 @@
                 </span>
             `;
             
-            // Calcular cuotas
-            const cuotaSinBonificar = calcularCuotaMensual(capitalPendiente, plazoRestante, tipoSinBonificar);
-            const cuotaBonificada = calcularCuotaMensual(capitalPendiente, plazoRestante, tipoBonificado);
+            // Calcular evolución anual
+            const { evolucion, anioInflexion } = calcularEvolucionAnual(
+                capitalPendiente, 
+                plazoRestante, 
+                tipoBase, 
+                tipoFinal, 
+                costeAnualBanco, 
+                costeAnualExterno
+            );
             
-            // Calcular costes totales
-            const costeTotalHipotecaSinBonificar = cuotaSinBonificar * plazoRestante * 12;
-            const costeTotalHipotecaBonificada = cuotaBonificada * plazoRestante * 12;
-            
-            // Calcular ahorros
-            const ahorroMensualHipoteca = cuotaSinBonificar - cuotaBonificada;
-            const ahorroTotalIntereses = costeTotalHipotecaSinBonificar - costeTotalHipotecaBonificada;
-            
-            // Calcular costes totales de cada opción
-            const costeTotalOpcionBanco = costeTotalHipotecaBonificada + (costeAnualBanco * plazoRestante);
-            const costeTotalOpcionExterna = costeTotalHipotecaSinBonificar + (costeAnualExterno * plazoRestante);
-            
-            // Calcular diferencia
-            const ahorroTotal = costeTotalOpcionExterna - costeTotalOpcionBanco;
-            const ahorroAnual = (ahorroTotal / plazoRestante);
+            // Calcular totales
+            const ultimoAno = evolucion[evolucion.length - 1];
+            const ahorroTotal = ultimoAno.ahorroAcumulado;
             const esRentable = ahorroTotal > 0;
             
             // Mostrar resultados
             mostrarResultados({
-                cuotaSinBonificar,
-                cuotaBonificada,
-                ahorroMensualHipoteca,
-                ahorroTotalIntereses,
+                capitalPendiente,
+                plazoRestante,
+                tipoBase,
+                tipoFinal,
                 costeAnualBanco,
                 costeAnualExterno,
-                costeTotalOpcionBanco,
-                costeTotalOpcionExterna,
                 ahorroTotal,
-                ahorroAnual,
                 esRentable,
-                plazoRestante,
-                sobrecosteProductosBanco: totalDiferencia
+                evolucion,
+                anioInflexion,
+                totalDiferencia
+            });
+            
+            // Mostrar gráfico
+            mostrarGrafico(evolucion);
+        }
+
+        // Función para mostrar el gráfico
+        function mostrarGrafico(evolucion) {
+            const container = document.getElementById('graficoContainer');
+            container.classList.remove('hidden');
+            
+            const ctx = document.getElementById('graficoEvolucion').getContext('2d');
+            
+            // Destruir gráfico anterior si existe
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: evolucion.map(e => `Año ${e.ano}`),
+                    datasets: [
+                        {
+                            label: 'Balance anual',
+                            data: evolucion.map(e => e.balanceAno),
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Ahorro acumulado',
+                            data: evolucion.map(e => e.ahorroAcumulado),
+                            borderColor: 'rgb(16, 185, 129)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('es-ES') + '€';
+                                }
+                            }
+                        }
+                    }
+                }
             });
         }
 
@@ -355,6 +584,19 @@
         function mostrarResultados(resultados) {
             const divResultados = document.getElementById('resultados');
             divResultados.classList.remove('hidden');
+            
+            // Encontrar el mejor momento para cancelar
+            let mejorMomento = '';
+            if (resultados.anioInflexion) {
+                mejorMomento = `
+                    <div class="mt-4 p-4 bg-yellow-100 rounded-lg">
+                        <p class="text-sm text-yellow-800">
+                            <strong>⏰ Momento óptimo:</strong> A partir del año ${resultados.anioInflexion} ya no te compensa mantener las bonificaciones. 
+                            El ahorro en intereses será menor que el sobrecoste de los productos.
+                        </p>
+                    </div>
+                `;
+            }
             
             divResultados.innerHTML = `
                 <!-- Alerta principal -->
@@ -370,129 +612,73 @@
                         <div class="flex-1">
                             <h3 class="text-lg font-semibold mb-2 ${resultados.esRentable ? 'text-green-800' : 'text-red-800'}">
                                 ${resultados.esRentable 
-                                    ? '✅ La hipoteca bonificada del banco SÍ te conviene' 
-                                    : '❌ La hipoteca bonificada del banco NO te conviene'}
+                                    ? '✅ Las bonificaciones SÍ te convienen (en general)' 
+                                    : '❌ Las bonificaciones NO te convienen'}
                             </h3>
                             <p class="${resultados.esRentable ? 'text-green-700' : 'text-red-700'}">
                                 ${resultados.esRentable 
-                                    ? `Ahorrarás ${formatNumber(resultados.ahorroTotal, 0)}€ durante la vida del préstamo`
-                                    : `Pagarás ${formatNumber(Math.abs(resultados.ahorroTotal), 0)}€ de más durante la vida del préstamo`}
+                                    ? `Ahorrarás ${formatNumber(resultados.ahorroTotal, 0)}€ durante toda la vida del préstamo`
+                                    : `Perderás ${formatNumber(Math.abs(resultados.ahorroTotal), 0)}€ durante toda la vida del préstamo`}
                             </p>
-                            <p class="text-sm mt-2 ${resultados.esRentable ? 'text-green-600' : 'text-red-600'}">
-                                Esto supone ${resultados.esRentable ? 'un ahorro' : 'un sobrecoste'} de ${formatNumber(Math.abs(resultados.ahorroAnual), 0)}€ al año
-                            </p>
+                            ${mejorMomento}
                         </div>
                     </div>
                 </div>
 
-                <!-- Comparación visual -->
-                <div class="grid md:grid-cols-2 gap-4 fade-in">
-                    <div class="bg-blue-50 rounded-xl p-6 result-card">
-                        <h4 class="font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-                                <path d="M8 6h8"></path>
-                                <path d="M8 10h8"></path>
-                                <path d="M8 14h8"></path>
-                            </svg>
-                            Opción 1: Hipoteca bonificada + productos banco
-                        </h4>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-blue-700">Cuota hipoteca:</span>
-                                <span class="font-semibold text-blue-900">${formatNumber(resultados.cuotaBonificada)}€/mes</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-blue-700">Productos:</span>
-                                <span class="font-semibold text-blue-900">${formatNumber(resultados.costeAnualBanco/12)}€/mes</span>
-                            </div>
-                            <div class="pt-3 border-t border-blue-200">
-                                <div class="flex justify-between">
-                                    <span class="font-semibold text-blue-900">Total mensual:</span>
-                                    <span class="font-bold text-blue-900 text-lg">
-                                        ${formatNumber(resultados.cuotaBonificada + resultados.costeAnualBanco/12)}€
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="pt-2">
-                                <div class="flex justify-between">
-                                    <span class="text-sm text-blue-700">Coste total (${resultados.plazoRestante} años):</span>
-                                    <span class="font-semibold text-blue-900">
-                                        ${formatNumber(resultados.costeTotalOpcionBanco, 0)}€
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Tabla de evolución año a año -->
+                <div class="mt-6 bg-gray-50 rounded-xl p-6">
+                    <h4 class="font-semibold text-gray-800 mb-4">Evolución año a año (primeros 10 años)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-300">
+                                    <th class="text-left py-2 px-3">Año</th>
+                                    <th class="text-right py-2 px-3">Ahorro intereses</th>
+                                    <th class="text-right py-2 px-3">Sobrecoste productos</th>
+                                    <th class="text-right py-2 px-3">Balance anual</th>
+                                    <th class="text-right py-2 px-3">Acumulado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${resultados.evolucion.slice(0, 10).map(e => `
+                                    <tr class="border-b border-gray-200 ${e.balanceAno < 0 ? 'bg-red-50' : ''}">
+                                        <td class="py-2 px-3">${e.ano}</td>
+                                        <td class="text-right py-2 px-3 text-green-600">+${formatNumber(e.ahorroIntereses, 0)}€</td>
+                                        <td class="text-right py-2 px-3 text-red-600">-${formatNumber(e.sobrecosteProductos, 0)}€</td>
+                                        <td class="text-right py-2 px-3 font-semibold ${e.balanceAno >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                            ${e.balanceAno >= 0 ? '+' : ''}${formatNumber(e.balanceAno, 0)}€
+                                        </td>
+                                        <td class="text-right py-2 px-3 font-semibold ${e.ahorroAcumulado >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                            ${e.ahorroAcumulado >= 0 ? '+' : ''}${formatNumber(e.ahorroAcumulado, 0)}€
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
-
-                    <div class="bg-purple-50 rounded-xl p-6 result-card">
-                        <h4 class="font-semibold text-purple-900 mb-4 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg>
-                            Opción 2: Hipoteca sin bonificar + productos externos
-                        </h4>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-purple-700">Cuota hipoteca:</span>
-                                <span class="font-semibold text-purple-900">${formatNumber(resultados.cuotaSinBonificar)}€/mes</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-purple-700">Productos:</span>
-                                <span class="font-semibold text-purple-900">${formatNumber(resultados.costeAnualExterno/12)}€/mes</span>
-                            </div>
-                            <div class="pt-3 border-t border-purple-200">
-                                <div class="flex justify-between">
-                                    <span class="font-semibold text-purple-900">Total mensual:</span>
-                                    <span class="font-bold text-purple-900 text-lg">
-                                        ${formatNumber(resultados.cuotaSinBonificar + resultados.costeAnualExterno/12)}€
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="pt-2">
-                                <div class="flex justify-between">
-                                    <span class="text-sm text-purple-700">Coste total (${resultados.plazoRestante} años):</span>
-                                    <span class="font-semibold text-purple-900">
-                                        ${formatNumber(resultados.costeTotalOpcionExterna, 0)}€
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    ${resultados.evolucion.length > 10 ? `
+                        <p class="text-xs text-gray-600 mt-2">Se muestran los primeros 10 años. Ver gráfico completo abajo.</p>
+                    ` : ''}
                 </div>
 
                 <!-- Información adicional -->
-                <div class="bg-gray-50 rounded-xl p-6 fade-in">
-                    <h4 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M12 16v-4"></path>
-                            <path d="M12 8h.01"></path>
+                <div class="mt-6 p-4 bg-amber-100 rounded-lg">
+                    <p class="text-sm text-amber-800">
+                        <strong>💡 Clave:</strong> El ahorro en intereses es mayor los primeros años porque el capital pendiente es más alto. 
+                        Con el tiempo, este ahorro disminuye mientras que el coste de los productos se mantiene constante.
+                    </p>
+                </div>
+
+                <!-- Botón para imprimir -->
+                <div class="text-center mt-6 no-print">
+                    <button onclick="window.print()" class="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
                         </svg>
-                        Análisis detallado
-                    </h4>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-2">Ahorro en intereses por bonificación:</p>
-                            <p class="text-2xl font-bold text-green-600">
-                                ${formatNumber(resultados.ahorroTotalIntereses, 0)}€
-                            </p>
-                            <p class="text-xs text-gray-500">en ${resultados.plazoRestante} años</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600 mb-2">Sobrecoste productos del banco:</p>
-                            <p class="text-2xl font-bold text-red-600">
-                                ${formatNumber(resultados.sobrecosteProductosBanco * resultados.plazoRestante, 0)}€
-                            </p>
-                            <p class="text-xs text-gray-500">en ${resultados.plazoRestante} años</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 p-4 bg-amber-100 rounded-lg">
-                        <p class="text-sm text-amber-800">
-                            <strong>⚠️ Importante:</strong> Revisa que los costes externos sean realistas. Compara precios de seguros en comparadores online y asegúrate de incluir todos los costes (comisiones de tarjetas, mantenimiento de cuentas, etc.).
-                        </p>
-                    </div>
+                        Imprimir resultados
+                    </button>
                 </div>
             `;
         }
@@ -500,8 +686,10 @@
         // Event listeners
         document.getElementById('capitalPendiente').addEventListener('input', calcular);
         document.getElementById('plazoRestante').addEventListener('input', calcular);
-        document.getElementById('tipoSinBonificar').addEventListener('input', calcular);
-        document.getElementById('tipoBonificado').addEventListener('input', calcular);
+        document.getElementById('tipoBase').addEventListener('input', () => {
+            actualizarTipoFinal();
+            calcular();
+        });
 
         // Inicializar
         actualizarTablaProductos();

@@ -21,6 +21,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
     <style>
         .fade-in {
             animation: fadeIn 0.5s ease-in;
@@ -211,6 +212,20 @@
                     </h2>
                     <div class="bg-gray-50 rounded-xl p-6">
                         <canvas id="graficoEvolucion" width="400" height="200"></canvas>
+                        <div class="mt-4 flex items-center justify-center gap-6 text-sm">
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-green-500 rounded"></div>
+                                <span>Período rentable</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 bg-red-500 rounded"></div>
+                                <span>Período no rentable</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-1 h-4 bg-yellow-600"></div>
+                                <span>Año de inflexión</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -552,11 +567,11 @@
             });
             
             // Mostrar gráfico
-            mostrarGrafico(evolucion);
+            mostrarGrafico(evolucion, anioInflexion);
         }
 
-        // Función para mostrar el gráfico
-        function mostrarGrafico(evolucion) {
+        // Función para mostrar el gráfico mejorado
+        function mostrarGrafico(evolucion, anioInflexion) {
             const container = document.getElementById('graficoContainer');
             container.classList.remove('hidden');
             
@@ -567,6 +582,57 @@
                 chartInstance.destroy();
             }
             
+            // Preparar las anotaciones
+            const annotations = {
+                line0: {
+                    type: 'line',
+                    yMin: 0,
+                    yMax: 0,
+                    borderColor: 'rgb(0, 0, 0)',
+                    borderWidth: 1,
+                    borderDash: [5, 5]
+                }
+            };
+            
+            // Añadir línea de inflexión si existe
+            if (anioInflexion) {
+                annotations.lineInflexion = {
+                    type: 'line',
+                    xMin: anioInflexion - 1,
+                    xMax: anioInflexion - 1,
+                    borderColor: 'rgb(245, 158, 11)',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    label: {
+                        enabled: true,
+                        content: `Año ${anioInflexion}: Punto de inflexión`,
+                        position: 'start',
+                        backgroundColor: 'rgba(245, 158, 11, 0.9)',
+                        color: 'white',
+                        padding: 6,
+                        borderRadius: 4,
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    }
+                };
+                
+                // Añadir área sombreada después del año de inflexión
+                annotations.boxNoRentable = {
+                    type: 'box',
+                    xMin: anioInflexion - 1,
+                    xMax: evolucion.length,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: 'transparent',
+                    borderWidth: 0
+                };
+            }
+            
+            // Crear colores dinámicos para el balance anual
+            const coloresBalanceAnual = evolucion.map(e => e.balanceAno >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)');
+            const bordeBalanceAnual = evolucion.map(e => e.balanceAno >= 0 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)');
+            
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -575,16 +641,32 @@
                         {
                             label: 'Balance anual',
                             data: evolucion.map(e => e.balanceAno),
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.3
+                            borderColor: bordeBalanceAnual,
+                            backgroundColor: coloresBalanceAnual,
+                            segment: {
+                                borderColor: ctx => {
+                                    const idx = ctx.p0DataIndex;
+                                    return evolucion[idx].balanceAno >= 0 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)';
+                                }
+                            },
+                            tension: 0.3,
+                            borderWidth: 3,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: ctx => {
+                                const value = ctx.parsed.y;
+                                return value >= 0 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)';
+                            }
                         },
                         {
                             label: 'Ahorro acumulado',
                             data: evolucion.map(e => e.ahorroAcumulado),
-                            borderColor: 'rgb(16, 185, 129)',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.3
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
                         }
                     ]
                 },
@@ -596,7 +678,36 @@
                         },
                         legend: {
                             display: true,
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    const value = context.parsed.y;
+                                    label += value >= 0 ? '+' : '';
+                                    label += value.toLocaleString('es-ES', { maximumFractionDigits: 0 }) + '€';
+                                    
+                                    // Añadir información adicional para el año de inflexión
+                                    if (anioInflexion && context.dataIndex === anioInflexion - 1) {
+                                        label += ' (Punto de inflexión)';
+                                    }
+                                    
+                                    return label;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: annotations
                         }
                     },
                     scales: {
@@ -606,6 +717,19 @@
                                 callback: function(value) {
                                     return value.toLocaleString('es-ES') + '€';
                                 }
+                            },
+                            grid: {
+                                color: function(context) {
+                                    if (context.tick.value === 0) {
+                                        return 'rgba(0, 0, 0, 0.2)';
+                                    }
+                                    return 'rgba(0, 0, 0, 0.05)';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
                             }
                         }
                     }
@@ -622,10 +746,24 @@
             let mejorMomento = '';
             if (resultados.anioInflexion) {
                 mejorMomento = `
-                    <div class="mt-4 p-4 bg-yellow-100 rounded-lg">
+                    <div class="mt-4 p-4 bg-yellow-100 rounded-lg border-2 border-yellow-300">
                         <p class="text-sm text-yellow-800">
-                            <strong>⏰ Momento óptimo:</strong> A partir del año ${resultados.anioInflexion} ya no te compensa mantener las bonificaciones. 
-                            El ahorro en intereses será menor que el sobrecoste de los productos.
+                            <strong>⏰ Momento óptimo para cancelar bonificaciones:</strong>
+                        </p>
+                        <p class="text-lg font-semibold text-yellow-900 mt-2">
+                            Año ${resultados.anioInflexion} de tu hipoteca
+                        </p>
+                        <p class="text-sm text-yellow-700 mt-1">
+                            A partir de este momento, el ahorro en intereses será menor que el sobrecoste de los productos.
+                        </p>
+                    </div>
+                `;
+            } else if (resultados.esRentable) {
+                mejorMomento = `
+                    <div class="mt-4 p-4 bg-green-100 rounded-lg">
+                        <p class="text-sm text-green-800">
+                            <strong>✅ Mantén las bonificaciones durante toda la hipoteca</strong><br>
+                            El ahorro en intereses siempre supera el sobrecoste de los productos.
                         </p>
                     </div>
                 `;
@@ -674,8 +812,11 @@
                             </thead>
                             <tbody>
                                 ${resultados.evolucion.slice(0, 10).map(e => `
-                                    <tr class="border-b border-gray-200 ${e.balanceAno < 0 ? 'bg-red-50' : ''}">
-                                        <td class="py-2 px-3">${e.ano}</td>
+                                    <tr class="border-b border-gray-200 ${e.balanceAno < 0 ? 'bg-red-50' : ''} ${resultados.anioInflexion && e.ano === resultados.anioInflexion ? 'bg-yellow-50 font-semibold' : ''}">
+                                        <td class="py-2 px-3">
+                                            ${e.ano}
+                                            ${resultados.anioInflexion && e.ano === resultados.anioInflexion ? '<span class="text-yellow-600 text-xs ml-1">⚠️</span>' : ''}
+                                        </td>
                                         <td class="text-right py-2 px-3 text-green-600">+${formatNumber(e.ahorroIntereses, 0)}€</td>
                                         <td class="text-right py-2 px-3 text-red-600">-${formatNumber(e.sobrecosteProductos, 0)}€</td>
                                         <td class="text-right py-2 px-3 font-semibold ${e.balanceAno >= 0 ? 'text-green-600' : 'text-red-600'}">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoniCalc - Calculadora de Bonificaciones Hipotecarias</title>
+    <title>Bonicalc - Calculadora de Bonificaciones Hipotecarias</title>
     <meta name="description" content="Descubre si te conviene la hipoteca bonificada del banco o contratar los productos por tu cuenta. Calculadora gratuita de bonificaciones hipotecarias.">
     <meta name="keywords" content="hipoteca, bonificaciones, calculadora, banco, seguros, ahorro">
     <meta name="author" content="Bonicalc">
@@ -133,6 +133,14 @@
                     </div>
                 </div>
 
+                <!-- Info sobre bonificaciones -->
+                <div class="mb-6 p-4 bg-amber-50 rounded-lg">
+                    <p class="text-sm text-amber-800">
+                        <strong>💡 Consejo:</strong> Introduce las bonificaciones que te ofrece tu banco. Cada banco tiene diferentes porcentajes. 
+                        Por ejemplo: nómina 0.50%, seguros 0.25%-0.30%, tarjetas 0.10%-0.20%, etc.
+                    </p>
+                </div>
+
                 <!-- Comparador de productos con bonificaciones -->
                 <div class="mt-8">
                     <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
@@ -220,7 +228,7 @@
     </div>
 
     <script>
-        // Datos de productos con bonificaciones
+        // Datos de productos con bonificaciones editables
         const productos = {
             nomina: { 
                 nombre: 'Domiciliación de nómina', 
@@ -232,7 +240,7 @@
             },
             seguroHogar: { 
                 nombre: 'Seguro de hogar', 
-                bonificacion: 0.3,
+                bonificacion: 0.25,
                 banco: 300, 
                 externo: 200, 
                 activo: true, 
@@ -240,7 +248,7 @@
             },
             seguroVida: { 
                 nombre: 'Seguro de vida', 
-                bonificacion: 0.3,
+                bonificacion: 0.25,
                 banco: 400, 
                 externo: 250, 
                 activo: true, 
@@ -248,7 +256,7 @@
             },
             tarjetas: { 
                 nombre: 'Tarjetas y uso mínimo', 
-                bonificacion: 0.2,
+                bonificacion: 0.15,
                 banco: 60, 
                 externo: 0, 
                 activo: true, 
@@ -256,15 +264,31 @@
             },
             planPensiones: { 
                 nombre: 'Plan de pensiones/fondos', 
-                bonificacion: 0.1,
+                bonificacion: 0.10,
                 banco: 120, 
                 externo: 120, 
                 activo: false, 
                 icono: 'wallet' 
             },
+            cuenta: { 
+                nombre: 'Cuenta sin comisiones', 
+                bonificacion: 0.10,
+                banco: 0, 
+                externo: 0, 
+                activo: false, 
+                icono: 'wallet' 
+            },
+            recibos: { 
+                nombre: 'Domiciliación de recibos', 
+                bonificacion: 0.05,
+                banco: 0, 
+                externo: 0, 
+                activo: false, 
+                icono: 'file' 
+            },
             otros: { 
                 nombre: 'Otros productos', 
-                bonificacion: 0.1,
+                bonificacion: 0.10,
                 banco: 100, 
                 externo: 50, 
                 activo: false, 
@@ -346,9 +370,18 @@
                         />
                     </td>
                     <td class="text-center py-4 px-4">
-                        <span class="font-semibold ${producto.activo ? 'text-green-600' : 'text-gray-400'}">
-                            ${formatNumber(producto.bonificacion)}%
-                        </span>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value="${producto.bonificacion}"
+                            onchange="actualizarProducto('${key}', 'bonificacion', this.value)"
+                            ${!producto.activo ? 'disabled' : ''}
+                            class="w-20 px-2 py-1 border rounded text-center ${
+                                producto.activo 
+                                    ? 'border-green-300 focus:ring-2 focus:ring-green-500 bg-green-50' 
+                                    : 'border-gray-200 bg-gray-100 text-gray-400'
+                            }"
+                        />
                     </td>
                     <td class="text-center py-4 px-4">
                         <input
